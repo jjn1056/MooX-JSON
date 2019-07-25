@@ -33,6 +33,7 @@ sub import {
           $rule->{mapped_field} => $value,
         );
       }
+      @structure = $self->modify_json(@structure) if $self->can('modify_json');
       return +{ @structure };
     };
   }
@@ -95,7 +96,13 @@ MooX::JSON - Generate a TO_JSON method from attributes.
     has alive => (is=>'ro', json=>',bool');
     has possibly_empty => (is=>'ro', json=>',omit_if_empty');
     has not_encoded => (is=>'ro');
-    
+
+    # Optional method to shove in some extra keys
+    sub modify_json {
+      my ($self, %data) = @_;
+      return (%data, extra_stuff => 1);
+    }
+
     use JSON::MaybeXS;
 
     my $json = JSON::MaybeXS->new(convert_blessed=>1);
@@ -112,7 +119,8 @@ The value of C<$encoded> is:
     {
        "alive" : true,
        "name" : "John",
-       "age-years" : 25
+       "age-years" : 25,
+       "extra_stuff": 1
     }
    
 Please note that the JSON spec does not preserve hash order, so the keys above
