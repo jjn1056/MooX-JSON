@@ -14,29 +14,26 @@ sub import {
   my $target = caller;
 
   my @to_json;
-  {
-    no strict 'refs';
-    *{"${target}::TO_JSON"} = sub {
-      my $self = shift;
-      my @structure = ();
-      foreach my $rule (@to_json) {
-        my $value = $self->${\$rule->{field}};
-        if(my $type = $rule->{type}) {
-          $value = ''+$value if $type == 1;
-          $value = 0+$value if $type == 2;
-          $value = $value ? \1:\0 if $type == 3;
-        }
-        if($rule->{omit_if_empty}) {
-          next unless $value;
-        }
-        push @structure, (
-          $rule->{mapped_field} => $value,
-        );
+  install_modifier $target, 'fresh', 'TO_JSON', sub {
+    my $self = shift;
+    my @structure = ();
+    foreach my $rule (@to_json) {
+      my $value = $self->${\$rule->{field}};
+      if(my $type = $rule->{type}) {
+        $value = ''+$value if $type == 1;
+        $value = 0+$value if $type == 2;
+        $value = $value ? \1:\0 if $type == 3;
       }
-      @structure = $self->modify_json(@structure) if $self->can('modify_json');
-      return +{ @structure };
-    };
-  }
+      if($rule->{omit_if_empty}) {
+        next unless $value;
+      }
+      push @structure, (
+        $rule->{mapped_field} => $value,
+      );
+    }
+    @structure = $self->modify_json(@structure) if $self->can('modify_json');
+    return +{ @structure };
+  };
 
   my %types = (
     str => 1,
