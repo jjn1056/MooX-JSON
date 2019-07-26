@@ -1,4 +1,4 @@
-package MooX::JSON;
+package MooX::TO_JSON;
 
 use warnings;
 use strict;
@@ -6,7 +6,6 @@ use strict;
 our $VERSION = '0.001';
 $VERSION = eval $VERSION;
 
-use Carp;
 use Class::Method::Modifiers qw(install_modifier);
 
 sub import {
@@ -24,8 +23,9 @@ sub import {
         $value = 0+$value if $type == 2;
         $value = $value ? \1:\0 if $type == 3;
       }
+      
       if($rule->{omit_if_empty}) {
-        next unless $value;
+        next unless $self->${\$rule->{predicate}};
       }
       push @structure, (
         $rule->{mapped_field} => $value,
@@ -58,6 +58,8 @@ sub import {
       if(my $found_type = $types{$extra1||''}) {
         $type = $found_type;
       }
+
+      my $predicate = $opts{predicate} ||= "has_".$field;
       
       $omit_if_empty = 1 if (($extra1||'') eq 'omit_if_empty') || (($extra2||'') eq 'omit_if_empty');
 
@@ -66,6 +68,7 @@ sub import {
         mapped_field => ($mapped_field ? $mapped_field : $field),
         type => $type,
         omit_if_empty => $omit_if_empty,
+        predicate => $predicate,
       };
     }
 
@@ -79,14 +82,14 @@ sub import {
 
 =head1 NAME
 
-MooX::JSON - Generate a TO_JSON method from attributes.
+MooX::TO_JSON - Generate a TO_JSON method from attributes.
 
 =head1 SYNOPSIS
 
     package Local::User;
 
     use Moo;
-    use MooX::JSON;
+    use MooX::TO_JSON;
 
     has name => (is=>'ro', json=>1);
     has age => (is=>'ro', json=>'age-years,num');
@@ -127,6 +130,35 @@ could be arranged differently.
 
 Make it easier to correctly encode your L<Moo> object into JSON.  It does this
 by inspecting your attributes and injection a C<TO_JSON> method into your class.
+You can tag how the attribute will serialize to JSON (forcing it into string or
+number / boolean).  
+
+    has name => (is=>'ro', json=>1);
+
+Setting the C<json> argument to 1 will serialize the attribute value to JSON use
+the defaults (that is the field name is the same as the attribute name, value is
+serialized even if C<undef> and no value coercions (to number or boolean for example)
+are forced).
+
+    has age => (is=>'ro', json=>'age-years,num');
+
+Here C<age> will be mapped to 'age-years' and the value forced into number context so
+that when the JSON encoder touches it the serialized value will be a number not a string.
+
+    has alive => (is=>'ro', json=>',bool');
+
+In this case the value is forced to boolean JSON context.
+
+    has possibly_empty => (is=>'ro', json=>',omit_if_empty');
+
+Lastly if the final tag in the 'json' string is 'omit_if_empty' we will omit including
+the field in the JSON output IF the attribute is not present (please note C<undef> is
+considered 'present/existing'.)  In order to do this we need to set a C<predicate> arg
+for the attribute (or use one if you define it).  This will slighly pollute the object
+namespace with the predicate method for each attribute you mark such.
+
+Your class can also contain a method C<modify_json> which
+takes the serialized attributes and allows you to add to them or modify them.
 
 =head1 AUTHOR
 

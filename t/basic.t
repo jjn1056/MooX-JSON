@@ -5,7 +5,7 @@ use JSON::MaybeXS;
   package Local::User;
 
   use Moo;
-  use MooX::JSON;
+  use MooX::TO_JSON;
 
   has name => (is=>'ro', json=>1);
   has age => (is=>'ro', json=>'age-years,num');
@@ -29,7 +29,7 @@ ok $encoded=~m/"name":"John"/;
 ok $encoded=~m/"alive":true/;
 ok $encoded=~m/"extra_stuff":1/;
 ok $encoded!~m/possibly_empty/;
-is length($encoded),59;
+is length($encoded), 59;
 
 done_testing;
 
