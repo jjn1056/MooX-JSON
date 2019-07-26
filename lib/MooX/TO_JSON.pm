@@ -17,6 +17,11 @@ sub import {
     my $self = shift;
     my @structure = ();
     foreach my $rule (@to_json) {
+
+      if($rule->{omit_if_empty}) {
+        next unless $self->${\$rule->{predicate}};
+      }
+
       my $value = $self->${\$rule->{field}};
       if(my $type = $rule->{type}) {
         $value = ''+$value if $type == 1;
@@ -24,9 +29,6 @@ sub import {
         $value = $value ? \1:\0 if $type == 3;
       }
       
-      if($rule->{omit_if_empty}) {
-        next unless $self->${\$rule->{predicate}};
-      }
       push @structure, (
         $rule->{mapped_field} => $value,
       );
